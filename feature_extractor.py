@@ -30,50 +30,6 @@ def extractor_feature(history_file, offers, istrain, transactions_dir, extractor
 			feature.get()
 			out_feature.write(str(feature) + "\n")
 			print feature
-
-		# csv_file = CSV(transactions)
-
-		# line = csv_file.next()
-		# last_customer_id = line[0]
-		# if last_customer_id in train_customer_id:
-		#     customer_history_feature = CustomerHistoryFeature(True)
-		# else:
-		#     customer_history_feature = CustomerHistoryFeature(False)
-		# customer_history_feature.update(line)
-
-		# customer_id_record = {}
-		# customer_id_record[last_customer_id] = 1
-		# issort = True
-
-		# for e, line in enumerate(csv_file):
-		#     customer_id = line[0]
-		#     if last_customer_id != customer_id:
-		#     # 保存，pickle序列化：
-		#         customer_file = extractor_feature_dir + "/" + str(last_customer_id)
-		#         with open(customer_file, "wb") as fid:
-		#             cPickle.dump(customer_history_feature, fid, 2)
-
-		#         last_customer_id = customer_id
-		#         # 已经存在的要重新读出来
-		#         if customer_id in customer_id_record:
-		#             issort = False
-		#             customer_file = extractor_feature_dir + "/" + str(customer_id)
-		#             with open(customer_file, "rb") as fid:
-		#                 print "reload",customer_id
-		#                 customer_history_feature = cPickle.load(fid)
-		#         else:
-		#             customer_id_record[customer_id] = 1
-		#             if customer_id in train_customer_id:
-		#                 customer_history_feature = CustomerHistoryFeature(True)
-		#             else:
-		#                 customer_history_feature = CustomerHistoryFeature(False)
-
-
-		#     customer_history_feature.update(line)
-
-		# if e % 50000 == 0:
-		#     print >> sys.stderr, e, datetime.now() - start
-
 	print "eclapse time:", datetime.now() - start
 
 
