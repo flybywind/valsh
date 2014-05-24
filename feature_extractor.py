@@ -1,7 +1,7 @@
 # -*- encoding: utf8 -*-
 import sys
 from datetime import *
-# import cPickle
+import traceback
 from ValuedShopper import *
 
 reload(sys)
@@ -26,13 +26,19 @@ def extractor_feature(history_file, offers, transactions_dir, extractor_feature_
 			cur_offer = offer_map[offer_history.offer]
 			customer_file = transactions_dir + "/" + customer_id + ".csv"
 			feature = CustomerOfferFeature(customer_file, offer_history, cur_offer)
-			feature.get()
-			out_feature.write(str(feature) + "\n")
+			try:
+				feature.get()
+				out_feature.write(str(feature) + "\n")
+			except Exception as e:
+				print >>sys.stderr, "Error when processing customer:", customer_id, \
+						"offer brand:", cur_offer.brand, "offer company:", cur_offer.company
+				traceback.print_exc()
+				sys.exit(-1)
+
 			proc += 1
 			if proc % 1000 == 0:
 				print "processed: ", proc, "\neclapse time:", datetime.now() - start
 	print "eclapse time:", datetime.now() - start
-
 
 offers = "../kaggle/offers.csv"
 test_history = "../kaggle/testHistory.csv"
@@ -40,7 +46,7 @@ train_history = "../kaggle/trainHistory.csv"
 transactions = "../test_dir/split_out_transactions"
 # offers = "test_dir/offers.csv"
 # test_history = "test_dir/testHistory.csv"
-# train_history = "test_dir/trainHistory.csv"
+# train_history = "../test_dir/trainHistory.csv"
 # transactions = "test_dir/transactions.csv"
 # features = "test_dir/features_dir"
 if __name__ == "__main__":
@@ -51,6 +57,6 @@ if __name__ == "__main__":
 	#             break;
 	#         test_transaction.write(line)
 	# fid.close()
-	extractor_feature(train_history, offers, transactions, "../kaggle/train_features")
+	extractor_feature(train_history, offers, transactions, "../kaggle/train_features.txt")
 
 	pass
