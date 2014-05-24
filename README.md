@@ -1,4 +1,5 @@
 Predict which shoppers will become repeat buyers
+=================================================
 
 Consumer brands often offer discounts to attract new shoppers to buy their products.
 The most valuable customers are those who return after this initial incented purchase.

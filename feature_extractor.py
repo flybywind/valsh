@@ -7,10 +7,8 @@ from ValuedShopper import *
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
-# 使用train和test中的所有customer id为过滤条件。把这批数据过滤出来
 # transactions.csv中的数据是顺序存放的
-
-def extractor_feature(history_file, offers, istrain, transactions_dir, extractor_feature_file):
+def extractor_feature(history_file, offers, transactions_dir, extractor_feature_file):
 	start = datetime.now()
 	#get all categories on offer in a dict
 	offer_map = dict()
@@ -21,15 +19,18 @@ def extractor_feature(history_file, offers, istrain, transactions_dir, extractor
 	csv_file = CSV(history_file)
 	history_map = {}
 	for line in csv_file:
-		history_map[line[0]] = OfferHistory(line, istrain)
+		history_map[line[0]] = OfferHistory(line)
 	with open(extractor_feature_file, "w") as out_feature:
+		proc = 0
 		for customer_id, offer_history in history_map.items():
 			cur_offer = offer_map[offer_history.offer]
-			customer_file = transactions_dir + "/" + customer_id
+			customer_file = transactions_dir + "/" + customer_id + ".csv"
 			feature = CustomerOfferFeature(customer_file, offer_history, cur_offer)
 			feature.get()
 			out_feature.write(str(feature) + "\n")
-			print feature
+			proc += 1
+			if proc % 1000 == 0:
+				print "processed: ", proc, "\neclapse time:", datetime.now() - start
 	print "eclapse time:", datetime.now() - start
 
 
@@ -50,6 +51,6 @@ if __name__ == "__main__":
 	#             break;
 	#         test_transaction.write(line)
 	# fid.close()
-	extractor_feature(train_history, offers, True, transactions, "../kaggle/train_features")
+	extractor_feature(train_history, offers, transactions, "../kaggle/train_features")
 
 	pass
