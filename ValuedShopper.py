@@ -3,8 +3,6 @@ import sys
 import StringIO
 from datetime import *
 
-import cPickle
-
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
@@ -134,9 +132,20 @@ class CustomerOfferFeature(object):
 		self.brand_on_company_loyalty = 0
 		# given the same company as offered, is the brand always preffered ?
 		self.company_on_brand_loyalty = 0
-		# all above are features:
+		self.company_cnt = 0
+		self.brand_cnt = 0
+		self.category_cnt = 0
+		self.dept_cnt = 0
+		self.one_year_shopping_cost = 0
+		self.everytime_shopping_cost = 0
+		# all above are numerate features:
 		self.feature_list = self.__dict__.keys()
 
+		self.most_category = ""
+		self.most_chain = ""
+		self.most_company = ""
+		self.most_brand = ""
+		self.most_dept = ""
 		self.customer_info = CSV(customer_file)
 		self.offer_history = offer_history
 		self.offer_info = offer_info
@@ -163,14 +172,21 @@ class CustomerOfferFeature(object):
 		just_samecompany_shopping_time = 0
 		just_samecompany_dollar_sum = 0
 		same_brand_company_shopping_time = 0
+		company_dict = {}
+		brand_dict = {}
+		dept_dict = {}
+		chain_dict = {}
+		category_dict = {}
+
 		offer_brand = self.offer_info.brand
 		offer_category = self.offer_info.category
 		offer_company = self.offer_info.company
 
 		for line in self.customer_info:
 			transactions_history = Transactions(line, self.offer_history.offerdate)
-			date_distance = transactions_history.date_distance
+			this_dept = transactions_history.dept
 			this_brand = transactions_history.brand
+			date_distance = transactions_history.date_distance
 			this_company = transactions_history.company
 			this_category = transactions_history.category
 			dollar = transactions_history.purchase_dollar
@@ -199,14 +215,36 @@ class CustomerOfferFeature(object):
 			if this_company == offer_company and this_brand == offer_brand:
 				same_brand_company_shopping_time += 1
 
+			if not this_brand in brand_dict:
+				self.brand_cnt += 1
+				brand_dict[this_brand] = 0
+			if not this_company in company_dict:
+				self.company_cnt += 1
+				company_dict[this_company] = 0
+			if not this_category in category_dict:
+				self.category_cnt += 1
+				category_dict[this_category] = 0
+			if not this_dept in dept_dict:
+				self.dept_cnt += 1
+				dept_dict[this_dept] = 0
+
+			brand_dict[this_brand] += 1
+			company_dict[this_company] += 1
+			category_dict[this_category] += 1
+			dept_dict[this_dept] += 1
+			chain_dict.setdefault(transactions_history.chain, 0)
+			chain_dict[transactions_history.chain] += 1
+
 			if this_category == offer_category:
 				if this_brand == offer_brand and this_company == offer_company:
-					same_exactly_shopping_time += 1
-					same_exactly_amount_sum += amount
-					same_exactly_dollar_sum += dollar
-					same_exactly_quantity_sum += transactions_history.purchasequantity
-					self.bought_same_exactly = self.merge_timeline(self.bought_same_exactly, \
-					                                               time_line)
+					if transactions_history.purchasequantity > 0:
+						same_exactly_shopping_time += 1
+						same_exactly_amount_sum += amount
+						same_exactly_dollar_sum += dollar
+						same_exactly_quantity_sum += transactions_history.purchasequantity
+						self.bought_same_exactly = self.merge_timeline(\
+							self.bought_same_exactly, \
+					        time_line)
 				if this_brand == offer_brand:
 					same_brand_amount_sum += amount
 					same_brand_dollar_sum += dollar
@@ -215,10 +253,12 @@ class CustomerOfferFeature(object):
 					same_company_amount_sum += amount
 					same_company_dollar_sum += dollar
 
-
 				category_dollar_sum += dollar
 				category_amount_sum += amount
 				category_shopping_time += 1
+
+		self.one_year_shopping_cost = total_shopping_dollar
+		self.everytime_shopping_cost = total_shopping_dollar / total_shopping_time
 		# 购买了同brand，同company的产品总量和同category产品的比例
 		self.same_exactly_amount_ratio = self.limit_ratio(same_exactly_amount_sum, category_amount_sum)
 		self.same_exactly_dollar_ratio = self.limit_ratio(same_exactly_dollar_sum, category_dollar_sum)
@@ -244,17 +284,31 @@ class CustomerOfferFeature(object):
 		                                                 just_samebrand_shopping_time)
 		self.company_on_brand_loyalty = self.limit_ratio(same_brand_company_shopping_time, \
 		                                                 just_samecompany_shopping_time)
+
+		self.most_category = self.most_in_dict(category_dict)
+		self.most_chain = self.most_in_dict(chain_dict)
+		self.most_company = self.most_in_dict(company_dict)
+		self.most_brand = self.most_in_dict(brand_dict)
+		self.most_dept = self.most_in_dict(dept_dict)
+
 		# 该offer的quantity和用户平时购买同brand的商品时的quantity是否match
 		if same_exactly_shopping_time == 0:
 			self.offer_quantity_match = 0
 			self.offer_discount = 1
 		else:
-			self.offer_quantity_match = float(same_exactly_quantity_sum) / same_exactly_shopping_time / \
-			                            self.offer_info.quantity
-			unit_price_before = float(same_exactly_dollar_sum) / same_exactly_quantity_sum
-			offer_price = float(self.offer_info.offervalue) / self.offer_info.quantity
-			# 同units商品单价的比值，表示打折力度
-			self.offer_discount = offer_price / unit_price_before
+			if same_exactly_shopping_time == 0 or self.offer_info.quantity == 0:
+				self.offer_quantity_match = 0
+			else:
+				self.offer_quantity_match = float(same_exactly_quantity_sum) / \
+				                            same_exactly_shopping_time / \
+			                                self.offer_info.quantity
+			if same_exactly_quantity_sum == 0 or self.offer_info.quantity == 0:
+				self.offer_discount = 1
+			else:
+				unit_price_before = float(same_exactly_dollar_sum) / same_exactly_quantity_sum
+				offer_price = float(self.offer_info.offervalue) / self.offer_info.quantity
+				# 同units商品单价的比值，表示打折力度
+				self.offer_discount = self.limit_ratio(offer_price, unit_price_before)
 	def merge_timeline(self, a, b):
 		return [int(i+j > 0) for i,j in zip(a,b)]
 
@@ -277,6 +331,14 @@ class CustomerOfferFeature(object):
 		else:
 			ret[3] = 1
 		return ret
+	def most_in_dict(self, one_dict):
+		maxv = 0
+		ret = None
+		for k, v in one_dict.items():
+			if maxv < v:
+				maxv = v
+				ret = k
+		return ret
 
 	def __str__(self):
 		out = StringIO.StringIO()
@@ -290,6 +352,16 @@ class CustomerOfferFeature(object):
 				out.write(" %s%d:%f" % (f, i, x))
 		for f in other_feature:
 			out.write(" %s:%f" % (f, getattr(self, f)))
+		# nominal features:
+		out.write(" offer_%s" % self.offer_info.offer_id)
+		out.write(" category_%s" % self.offer_info.category)
+		out.write(" brand_%s" % self.offer_info.brand)
+		out.write(" company_%s" % self.offer_info.company)
+		out.write(" most_brand_%s" % self.most_brand)
+		out.write(" most_category_%s" % self.most_category)
+		out.write(" most_chain_%s" % self.most_chain)
+		out.write(" most_company_%s" % self.most_company)
+		out.write(" most_dept_%s" % self.most_dept)
 		out.seek(0)
 		str_self = out.next()
 		out.close()
