@@ -1,5 +1,6 @@
 # -*- encoding: utf8 -*-
 import sys
+import os
 from datetime import *
 import traceback
 from ValuedShopper import *
@@ -57,6 +58,11 @@ if __name__ == "__main__":
 	#             break;
 	#         test_transaction.write(line)
 	# fid.close()
-	extractor_feature(train_history, offers, transactions, "../kaggle/train_features.txt")
+	# save old version:
+	timestamp = datetime.now().isoformat()
+	latest_feature = "../kaggle/train_features.txt"
+	old_feature = "../kaggle/train_features" + timestamp + ".txt"
+	os.rename(latest_feature, old_feature)
+	extractor_feature(train_history, offers, transactions, latest_feature)
 
 	pass
