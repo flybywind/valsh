@@ -1,9 +1,5 @@
 # -*- encoding: utf8 -*-
-import os
 import numpy as np
-from datetime import *
-import traceback
-import cPickle
 import random
 from gbrt_conf import *
 from sklearn.ensemble import GradientBoostingClassifier
@@ -43,25 +39,6 @@ def read_features(file):
 			no += 1
 	return header, x_array, label
 
-
-def save_obj(obj, file):
-	timestamp = datetime.now().isoformat()
-	old = file + timestamp
-	try:
-		os.rename(file, old)
-	except Exception as e:
-		traceback.print_exc()
-		print "WARNING: rename old file failed", e
-	with open(file, "wb") as fid:
-		cPickle.dump(obj, fid)
-
-
-def load_obj(file):
-	with open(file) as fid:
-		obj = cPickle.load(fid)
-	return obj
-
-
 if __name__ == "__main__":
 	if load_sample:
 		header, x_array, label = load_obj(sample_save_file)
@@ -79,13 +56,13 @@ if __name__ == "__main__":
 	train_bool = np.asarray([i in train_index for i in all_index])
 	test_bool = np.asarray([i in test_index for i in all_index])
 
-	all_samle = np.array(x_array, dtype=np.float32)
+	all_sample = np.array(x_array, dtype=np.float32)
 	all_label = np.array(label, dtype=np.int)
 
-	train_x = all_samle[train_bool, :]
+	train_x = all_sample[train_bool, :]
 	train_y = all_label[train_bool]
 
-	test_x = all_samle[test_bool, :]
+	test_x = all_sample[test_bool, :]
 	test_y = all_label[test_bool]
 
 	if load_model == False:
