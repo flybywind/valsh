@@ -29,12 +29,13 @@ train_y = all_label[train_bool]
 test_x = all_sample[test_bool, :]
 test_y = all_label[test_bool]
 
-gbrt = GradientBoostingClassifier()
-parameter_grid = {'n_estimators' : np.linspace(10, 130, 5),
-                 'learning_rate': np.linspace(0.1, 1, 5),
-                 'max_depth' : np.linspace(1,4,4),
-                 'feature_ratio' : np.linspace(0.1, 1, 5)}
-gbrt_best = grid_search.GridSearchCV(gbrt, parameter_grid, verbose=2)
-gbrt_best.fit(train_x, train_y)
+if __name__ == "__main__":
+	gbrt = GradientBoostingClassifier()
+	parameter_grid = {'n_estimators' : range(10, 110, 30),
+	                 'learning_rate': np.linspace(0.1, 1, 5),
+	                 'max_depth' : range(1, 5),
+	                 'max_features' : np.linspace(0.1, 1, 5)}
+	gbrt_best = grid_search.GridSearchCV(gbrt, parameter_grid, cv=2, n_jobs=2, verbose=2)
+	gbrt_best.fit(train_x, train_y)
 
-save_obj(gbrt_best, "../kaggle/gbrt_best.cpk")
+	save_obj(gbrt_best, "../kaggle/gbrt_best.cpk")
