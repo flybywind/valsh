@@ -1,3 +1,4 @@
+#!/usr/bin/evn python
 # -*- encoding: utf8 -*-
 from gbrt_conf import *
 from sklearn.ensemble import GradientBoostingClassifier
