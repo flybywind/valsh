@@ -3,6 +3,7 @@ import traceback
 import cPickle
 import random
 import numpy as np
+from sklearn import metrics
 from datetime import *
 
 load_sample = True
@@ -60,3 +61,12 @@ def split_train_test(seed, x_array, label, ratio):
 	test_x = all_sample[test_bool, :]
 	test_y = all_label[test_bool]
 	return (train_x, train_y), (test_x, test_y)
+
+
+def f1_score(estimator, x, y):
+	yprob = estimator.predict(x)
+	# yp = yprob[:,1] > 0.8
+	s = metrics.f1_score(y,yprob)
+	# print "size of x is", x.shape
+	# print "f1 score is", s
+	return s

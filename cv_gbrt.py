@@ -1,8 +1,11 @@
-#!/usr/bin/evn python
+#!/usr/bin/env python
 # -*- encoding: utf8 -*-
 from gbrt_conf import *
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn import grid_search
+from scipy.stats import uniform
+
+
 def read_features(file):
 	label = []
 	x_array = []
@@ -49,13 +52,17 @@ if __name__ == "__main__":
 	train_set, test_set = split_train_test(502227, x_array, label, 0.9)
 
 	train_x, train_y = train_set
+	# print "size of train_x is", train_x.shape
 
 	gbrt = GradientBoostingClassifier()
-	parameter_grid = {'n_estimators' : range(10, 110, 30),
-	                 'learning_rate': np.linspace(0.1, 1, 5),
-	                 'max_depth' : range(1, 5),
-	                 'max_features' : np.linspace(0.1, 1, 5)}
-	gbrt_best = grid_search.GridSearchCV(gbrt, parameter_grid, cv=2, n_jobs=2, verbose=5)
+	parameter_grid = {'n_estimators' : range(20, 110, 20),
+	                 'learning_rate': uniform(loc = 0.01, scale = 0.99),
+	                 'max_depth' : range(1, 6, 1),
+		             'max_features' : uniform(loc = 0.1, scale = 0.8),
+		             'subsample' : uniform(loc = 0.6, scale = 0.39) }
+	gbrt_best = grid_search.RandomizedSearchCV(gbrt, \
+	                parameter_grid, scoring = f1_score, \
+	                cv=2, n_jobs=2, n_iter=200, verbose=5)
 	gbrt_best.fit(train_x, train_y)
 
 	save_obj(gbrt_best, "../kaggle/gbrt_best.cpk")
