@@ -9,9 +9,8 @@ from sklearn import metrics
 
 
 header, x, y = load_obj("../kaggle/train.cpk")
-gbrt_gs = load_obj("../kaggle/gbrt_best.cpk")
-gbrt = gbrt_gs.best_estimator_
-print "best prameters:", gbrt_gs.best_params_
+gbrt = load_obj("../kaggle/gbrt_best.cpk")
+print "best prameters:", gbrt.get_params()
 
 sample_x = np.array(x, dtype=np.float32)
 sample_y = np.array(y, dtype=np.float32)
