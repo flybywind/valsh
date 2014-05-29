@@ -6,6 +6,7 @@ import numpy as np
 from sklearn import metrics
 from datetime import *
 
+seed = 502227
 load_sample = True
 load_model = False
 feature_file = "../kaggle/train_features.txt"
@@ -62,6 +63,11 @@ def split_train_test(seed, x_array, label, ratio):
 	test_y = all_label[test_bool]
 	return (train_x, train_y), (test_x, test_y)
 
+
+def auc(estimator, x, y):
+	yprob = estimator.predict_proba(x)
+	pr_auc = metrics.average_precision_score(y, yprob[:,1])
+	return pr_auc
 
 def f1_score(estimator, x, y):
 	yprob = estimator.predict(x)

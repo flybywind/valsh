@@ -49,20 +49,28 @@ if __name__ == "__main__":
 		save = [header, x_array, label]
 		save_obj(save, sample_save_file)
 
-	train_set, test_set = split_train_test(502227, x_array, label, 0.9)
+	train_set, test_set = split_train_test(seed, x_array, label, 0.9)
 
 	train_x, train_y = train_set
 	# print "size of train_x is", train_x.shape
 
 	gbrt = GradientBoostingClassifier()
-	parameter_grid = {'n_estimators' : range(20, 110, 20),
+	# parameter_grid = {'max_features': [0.602624052893],
+	#                             'n_estimators':[100],
+	#                             'learning_rate':[0.8939506917],
+	#                             'max_depth':[5],
+	#                             'subsample':[0.701917726422] }
+	parameter_grid = {'n_estimators' : range(10, 110, 10),
 	                 'learning_rate': uniform(loc = 0.01, scale = 0.99),
 	                 'max_depth' : range(1, 6, 1),
-		             'max_features' : uniform(loc = 0.1, scale = 0.8),
-		             'subsample' : uniform(loc = 0.6, scale = 0.39) }
-	gbrt_best = grid_search.RandomizedSearchCV(gbrt, \
-	                parameter_grid, scoring = f1_score, \
-	                cv=2, n_jobs=2, n_iter=200, verbose=5)
-	gbrt_best.fit(train_x, train_y)
+		             'max_features' : uniform(loc = 0.1, scale = 0.89),
+		             'subsample' : uniform(loc = 0.2, scale = 0.79) }
+	gbrt_gridsearch = grid_search.RandomizedSearchCV(gbrt, \
+	                parameter_grid, scoring = auc, \
+	                cv=4, n_jobs=2, n_iter=300, verbose=5, refit=False)
+	gbrt_gridsearch.fit(train_x, train_y)
 
+	gbrt_best = GradientBoostingClassifier(verbose=2, **gbrt_gridsearch.best_params_)
+	gbrt_best.fit(train_x, train_y)
+	print "parameters:", gbrt_best.get_params()
 	save_obj(gbrt_best, "../kaggle/gbrt_best.cpk")
