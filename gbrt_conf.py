@@ -19,8 +19,8 @@ learning_rate = 0.6
 tree_num = 100
 # tree_num = 500    # 0.74053479945
 subsample = 1.0
-min_samples_split = 2
-min_samples_leaf = 1
+min_samples_split = 10
+min_samples_leaf = 5
 tree_max_depth = 3
 feature_ratio = 0.9
 
@@ -61,7 +61,7 @@ def split_train_test(seed, x_array, label, ratio):
 
 	test_x = all_sample[test_bool, :]
 	test_y = all_label[test_bool]
-	return (train_x, train_y), (test_x, test_y)
+	return (train_x, train_y), (test_x, test_y), train_index
 
 
 def auc(estimator, x, y):
