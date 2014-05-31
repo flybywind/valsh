@@ -46,7 +46,7 @@ def split_transactions(transactions, split_out_dir):
 		if e % 50000 == 0:
 			print e, datetime.now() - start
 			print >> sys.stderr, e, datetime.now() - start
-	
+	fid.close()
 	print e, datetime.now() - start,"sort:",str(issort)
 
 offers = "kaggle/offers.csv"

@@ -284,6 +284,11 @@ class CustomerOfferFeature(object):
 		self.norm_vec("bought_same_company", just_samecompany_shopping_time+0.0)
 		self.norm_vec("bought_same_company_dollar", just_samecompany_dollar_sum)
 
+		self.norm_vec("bought_diff_brand", \
+		              total_shopping_time - just_samebrand_shopping_time + 0.0)
+		self.norm_vec("bought_diff_company", \
+		              total_shopping_time - just_samecompany_shopping_time+0.0)
+
 		self.one_year_shopping_cost = total_shopping_dollar
 		self.everytime_shopping_cost = total_shopping_dollar / total_shopping_time
 		# 购买了同brand，同company的产品总量和同category产品的比例
@@ -367,6 +372,8 @@ class CustomerOfferFeature(object):
 				ret = k
 		return ret
 	def norm_vec(self, name, N):
+		if N == 0:
+			return
 		v = getattr(self, name)
 		norm_v = [i/N for i in v]
 		setattr(self, name, norm_v)

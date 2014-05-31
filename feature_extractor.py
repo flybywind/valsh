@@ -60,6 +60,18 @@ if __name__ == "__main__":
 	# fid.close()
 	# save old version:
 	timestamp = datetime.now().isoformat()
+
+	print "begin extracting train file"
+	latest_feature = "../kaggle/train_features.txt"
+	old_feature = "../kaggle/train_features" + timestamp + ".txt"
+	try:
+		os.rename(latest_feature, old_feature)
+	except Exception:
+		print "rename", latest_feature, "to", old_feature,"failed, never mind!"
+
+	extractor_feature(train_history, offers, transactions, latest_feature)
+
+	print "begin extracting test file"
 	latest_feature = "../kaggle/test_features.txt"
 	old_feature = "../kaggle/test_features" + timestamp + ".txt"
 	try:
@@ -68,5 +80,4 @@ if __name__ == "__main__":
 		print "rename", latest_feature, "to", old_feature,"failed, never mind!"
 
 	extractor_feature(test_history, offers, transactions, latest_feature)
-
 	pass
