@@ -46,7 +46,7 @@ test_history = "../kaggle/testHistory.csv"
 train_history = "../kaggle/trainHistory.csv"
 transactions = "../test_dir/split_out_transactions"
 # offers = "test_dir/offers.csv"
-# test_history = "test_dir/testHistory.csv"
+# test_history = "../test_dir/testHistory.csv"
 # train_history = "../test_dir/trainHistory.csv"
 # transactions = "test_dir/transactions.csv"
 # features = "test_dir/features_dir"
@@ -60,9 +60,13 @@ if __name__ == "__main__":
 	# fid.close()
 	# save old version:
 	timestamp = datetime.now().isoformat()
-	latest_feature = "../kaggle/train_features.txt"
-	old_feature = "../kaggle/train_features" + timestamp + ".txt"
-	os.rename(latest_feature, old_feature)
-	extractor_feature(train_history, offers, transactions, latest_feature)
+	latest_feature = "../kaggle/test_features.txt"
+	old_feature = "../kaggle/test_features" + timestamp + ".txt"
+	try:
+		os.rename(latest_feature, old_feature)
+	except Exception:
+		print "rename", latest_feature, "to", old_feature,"failed, never mind!"
+
+	extractor_feature(test_history, offers, transactions, latest_feature)
 
 	pass

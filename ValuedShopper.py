@@ -118,10 +118,13 @@ class CustomerOfferFeature(object):
 		super(CustomerOfferFeature, self).__init__()
 		# history of bought the same brand, no matter what category:
 		self.bought_same_brand = [0 for i in range(4)]
+		self.bought_same_brand_dollar = [0.0 for i in range(4)]
 		self.bought_diff_brand = self.bought_same_brand
 		self.bought_same_company = [0 for i in range(4)]
+		self.bought_same_company_dollar = [0.0 for i in range(4)]
 		self.bought_diff_company = self.bought_same_company
 		self.bought_same_exactly = [0 for i in range(4)]
+		self.bought_same_exactly_dollar = [0.0 for i in range(4)]
 		self.same_exactly_amount_ratio = 0  # 购买了同brand，同company的产品总量和同category产品的比例
 		self.same_exactly_dollar_ratio = 0
 		self.brand_amount_ratio = 0  # 购买该品牌的总量，占同category产品的比例
@@ -203,11 +206,14 @@ class CustomerOfferFeature(object):
 			total_shopping_time += 1
 			total_shopping_dollar += dollar
 			time_line = self.get_timeline(date_distance)
+			time_line_dollar = self.get_timeline(date_distance, dollar)
 			if this_brand == offer_brand:
 				just_samebrand_shopping_time += 1
 				just_samebrand_dollar_sum += transactions_history.purchase_dollar
 				self.bought_same_brand = \
 					self.merge_timeline(self.bought_same_brand, time_line)
+				self.bought_same_brand_dollar = \
+					self.merge_timeline(self.bought_same_brand_dollar, time_line_dollar)
 			else:
 				self.bought_diff_brand = \
 					self.merge_timeline(self.bought_diff_brand, time_line)
@@ -217,6 +223,8 @@ class CustomerOfferFeature(object):
 				just_samecompany_dollar_sum += transactions_history.purchase_dollar
 				self.bought_same_company = \
 						self.merge_timeline(self.bought_same_company, time_line)
+				self.bought_same_company_dollar = \
+					self.merge_timeline(self.bought_same_company_dollar, time_line_dollar)
 			else:
 				self.bought_diff_company = \
 					self.merge_timeline(self.bought_diff_company, time_line)
@@ -246,14 +254,16 @@ class CustomerOfferFeature(object):
 
 			if this_category == offer_category:
 				if this_brand == offer_brand and this_company == offer_company:
-					if transactions_history.purchasequantity > 0:
-						same_exactly_shopping_time += 1
-						same_exactly_amount_sum += amount
-						same_exactly_dollar_sum += dollar
-						same_exactly_quantity_sum += transactions_history.purchasequantity
-						self.bought_same_exactly = self.merge_timeline(\
-							self.bought_same_exactly, \
-					        time_line)
+					# if transactions_history.purchasequantity > 0:
+					same_exactly_shopping_time += 1
+					same_exactly_amount_sum += amount
+					same_exactly_dollar_sum += dollar
+					same_exactly_quantity_sum += transactions_history.purchasequantity
+					self.bought_same_exactly = self.merge_timeline(\
+						self.bought_same_exactly, time_line)
+					self.bought_same_exactly_dollar = self.merge_timeline(\
+						self.bought_same_company_dollar, time_line_dollar)
+
 				if this_brand == offer_brand:
 					same_brand_amount_sum += amount
 					same_brand_dollar_sum += dollar
@@ -265,6 +275,14 @@ class CustomerOfferFeature(object):
 				category_dollar_sum += dollar
 				category_amount_sum += amount
 				category_shopping_time += 1
+
+		# norm time-line data
+		self.norm_vec("bought_same_exactly", same_exactly_shopping_time+0.0)
+		self.norm_vec("bought_same_exactly_dollar", same_exactly_dollar_sum)
+		self.norm_vec("bought_same_brand", just_samebrand_shopping_time+0.0)
+		self.norm_vec("bought_same_brand_dollar", just_samebrand_dollar_sum)
+		self.norm_vec("bought_same_company", just_samecompany_shopping_time+0.0)
+		self.norm_vec("bought_same_company_dollar", just_samecompany_dollar_sum)
 
 		self.one_year_shopping_cost = total_shopping_dollar
 		self.everytime_shopping_cost = total_shopping_dollar / total_shopping_time
@@ -319,9 +337,7 @@ class CustomerOfferFeature(object):
 				# 同units商品单价的比值，表示打折力度
 				self.offer_discount = self.limit_ratio(offer_price, unit_price_before)
 	def merge_timeline(self, a, b):
-		# todo: 为什么不直接相加呢？
-		# or 把amount和purchasevalue都按时间段累加？这样感觉更有区分度
-		return [int(i+j > 0) for i,j in zip(a,b)]
+		return [i+j for i,j in zip(a,b)]
 
 	def limit_ratio(self, a, b):
 		if a == 0:
@@ -331,16 +347,16 @@ class CustomerOfferFeature(object):
 		else:
 			return float(a) / b
 
-	def get_timeline(self, date_distance):
+	def get_timeline(self, date_distance, value=1):
 		ret = [0, 0, 0, 0]
 		if date_distance < 30:
-			ret[0] = 1
+			ret[0] = value
 		elif date_distance < 60:
-			ret[1] = 1
+			ret[1] = value
 		elif date_distance < 120:
-			ret[2] = 1
+			ret[2] = value
 		else:
-			ret[3] = 1
+			ret[3] = value
 		return ret
 	def most_in_dict(self, one_dict):
 		maxv = 0
@@ -350,6 +366,10 @@ class CustomerOfferFeature(object):
 				maxv = v
 				ret = k
 		return ret
+	def norm_vec(self, name, N):
+		v = getattr(self, name)
+		norm_v = [i/N for i in v]
+		setattr(self, name, norm_v)
 
 	def __str__(self):
 		out = StringIO.StringIO()
