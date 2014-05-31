@@ -93,6 +93,15 @@ class OfferHistory(object):
 			self.repeater = self.repeattrips > 0
 			time_ary = [int(i) for i in arg[6].split('-')]
 			self.offerdate = date(time_ary[0], time_ary[1], time_ary[2])
+		elif len(arg) == 5:
+			self.customer_id = arg[0]
+			self.chain = arg[1]
+			self.offer = arg[2]
+			self.market = arg[3]
+			self.repeattrips = 0
+			self.repeater = False
+			time_ary = [int(i) for i in arg[4].split('-')]
+			self.offerdate = date(time_ary[0], time_ary[1], time_ary[2])
 		else:
 			raise Exception(
 				"need 7 field in arg:\n'id', 'chain', 'offer', 'market', 'repeattrips', 'repeater', 'offerdate'")
@@ -310,6 +319,7 @@ class CustomerOfferFeature(object):
 				# 同units商品单价的比值，表示打折力度
 				self.offer_discount = self.limit_ratio(offer_price, unit_price_before)
 	def merge_timeline(self, a, b):
+		# todo: 为什么不直接相加呢？
 		return [int(i+j > 0) for i,j in zip(a,b)]
 
 	def limit_ratio(self, a, b):
