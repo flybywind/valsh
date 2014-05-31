@@ -320,6 +320,7 @@ class CustomerOfferFeature(object):
 				self.offer_discount = self.limit_ratio(offer_price, unit_price_before)
 	def merge_timeline(self, a, b):
 		# todo: 为什么不直接相加呢？
+		# or 把amount和purchasevalue都按时间段累加？这样感觉更有区分度
 		return [int(i+j > 0) for i,j in zip(a,b)]
 
 	def limit_ratio(self, a, b):
