@@ -11,7 +11,7 @@ load_sample = True
 load_model = False
 feature_file = "../kaggle/train_features.txt"
 sample_save_file = "../kaggle/train.cpk"
-model_save_file = "../kaggle/gbrt.cpk"
+model_save_file = "../kaggle/gbrt_best.cpk"
 grid_search_model_file = "../kaggle/gbrt_best.cpk"
 test_predict_file = "../kaggle/test_predict.txt"
 feature_important_file = "../kaggle/feature_important.csv"
@@ -76,3 +76,41 @@ def f1_score(estimator, x, y):
 	# print "size of x is", x.shape
 	# print "f1 score is", s
 	return s
+
+
+def read_features(file):
+	label = []
+	x_array = []
+	header = []
+	id = {}
+	no = 0
+	start = datetime.now()
+	with open(file, "r") as fid:
+		for line in fid:
+			seg = line.strip().split(" ")
+			id[no] = seg[1][1:]
+			feature_num = len(seg) - 2
+			one_sample = [0.0 for i in range(feature_num)]
+
+			for feature_indx in range(feature_num):
+				indx = feature_indx + 2
+				fv_pair = seg[indx].split(":")
+				if len(fv_pair) == 2:
+					feature_name, feature_value = fv_pair
+				else:
+					# nominal features
+					p = seg[indx].split("_")
+					feature_name = "_".join(p[:-1])
+					feature_value = p[-1]
+				if no == 0:
+					header.append(feature_name)
+				else:
+					if header[feature_indx] != feature_name:
+						raise Exception("Feature format illegal, different with previous line:\n" + line)
+				one_sample[feature_indx] = float(feature_value)
+			if no % 10000 == 0:
+				print "processed",no,"lines, eclapse time:", datetime.now() - start
+			x_array.append(one_sample)
+			label.append(int(seg[0]))
+			no += 1
+	return header, x_array, label, id

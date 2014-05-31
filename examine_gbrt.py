@@ -21,10 +21,12 @@ test_n = test_x.shape[0]
 
 yprob = gbrt.predict_proba(test_x)
 precision, recall, thresholds = metrics.precision_recall_curve(test_y, yprob[:,1])
+fpr, tpr, th = metrics.roc_curve(test_y, yprob[:,1])
 pr_auc = metrics.average_precision_score(test_y, yprob[:,1])
-print "auc", pr_auc
+auc = metrics.auc(fpr, tpr)
+print "auc:", auc, "pr_auc:",pr_auc
 
-# TODO
+# TODO 具体预测函数？
 # th = 0.5
 # yproba = gbrt.predict_proba(sample_x)
 # for i, x in enumerate(sample_x):
@@ -32,29 +34,15 @@ print "auc", pr_auc
 # 		# test sample:
 
 
-
-
-# find max f1_score:
-f1_score_max = 0
-maxi = 0
-for i, th in enumerate(thresholds):
-	class_pred = np.zeros(test_n)
-	class_pred[yprob[:,1] > th] = 1
-	f1 = metrics.f1_score(test_y, class_pred)
-	if f1_score_max < f1:
-		f1_score_max = f1
-		maxi = i
-print "max f1_score at",maxi,":",f1_score_max,\
-	"precision =",precision[maxi],"recall =", recall[maxi],\
-	"threshold =", thresholds[maxi]
-#
-# plt.plot(recall, precision, "b.-")
-# plt.ylabel("precision")
-# plt.xlabel("recall")
-# plt.show()
-
 # show top10 important features:
-# top10_important_feature = list(abs(gbrt.feature_importances_).argsort()[-10:])
+sorted_feature_important_ind = gbrt.feature_importances_.argsort()
+with open(feature_important_file, "w") as fid:
+	for i in sorted_feature_important_ind:
+		fea_name = header[i]
+		fea_imp = gbrt.feature_importances_[i]
+		fid.write("%s:%f\n" % (fea_name, fea_imp))
+
+# top10_important_feature = sorted_feature_important_ind[-6:]
 #
 # for i in range(6):
 # 	fea_id = top10_important_feature[-1-i]

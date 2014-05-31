@@ -6,47 +6,11 @@ from sklearn import grid_search
 from scipy.stats import uniform
 
 
-
-def read_features(file):
-	label = []
-	x_array = []
-	header = []
-	no = 0
-	start = datetime.now()
-	with open(file, "r") as fid:
-		for line in fid:
-			seg = line.strip().split(" ")
-			feature_num = len(seg) - 2
-			one_sample = [0.0 for i in range(feature_num)]
-
-			for feature_indx in range(feature_num):
-				indx = feature_indx + 2
-				fv_pair = seg[indx].split(":")
-				if len(fv_pair) == 2:
-					feature_name, feature_value = fv_pair
-				else:
-					# nominal features
-					p = seg[indx].split("_")
-					feature_name = "_".join(p[:-1])
-					feature_value = p[-1]
-				if no == 0:
-					header.append(feature_name)
-				else:
-					if header[feature_indx] != feature_name:
-						raise Exception("Feature format illegal, different with previous line:\n" + line)
-				one_sample[feature_indx] = float(feature_value)
-			if no % 10000 == 0:
-				print "processed",no,"lines, eclapse time:", datetime.now() - start
-			x_array.append(one_sample)
-			label.append(int(seg[0]))
-			no += 1
-	return header, x_array, label
-
 if __name__ == "__main__":
 	if load_sample:
 		header, x_array, label = load_obj(sample_save_file)
 	else:
-		header, x_array, label = read_features(feature_file)
+		header, x_array, label, _ = read_features(feature_file)
 		save = [header, x_array, label]
 		save_obj(save, sample_save_file)
 
@@ -71,4 +35,4 @@ if __name__ == "__main__":
 	gbrt_best = GradientBoostingClassifier(verbose=2, **gbrt_gridsearch.best_params_)
 	gbrt_best.fit(train_x, train_y)
 	print "parameters:", gbrt_best.get_params()
-	save_obj(gbrt_best, "../kaggle/gbrt_best.cpk")
+	save_obj(gbrt_best, model_save_file)
