@@ -2,12 +2,20 @@
 import sys
 import os
 from datetime import *
+import cPickle
 import traceback
 from ValuedShopper import *
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
+def save_obj(obj, file):
+	with open(file, "wb") as fid:
+		cPickle.dump(obj, fid)
 
+def load_obj(file):
+	with open(file) as fid:
+		obj = cPickle.load(fid)
+	return obj
 # transactions.csv中的数据是顺序存放的
 def extractor_feature(history_file, offers, transactions_dir, extractor_feature_file):
 	start = datetime.now()
@@ -41,29 +49,19 @@ def extractor_feature(history_file, offers, transactions_dir, extractor_feature_
 				print "processed: ", proc, "\neclapse time:", datetime.now() - start
 	print "eclapse time:", datetime.now() - start
 
-offers = "../kaggle/offers.csv"
-test_history = "../kaggle/testHistory.csv"
-train_history = "../kaggle/trainHistory.csv"
+base_dir = "../kaggle/"
+offers = base_dir + "offers.csv"
+test_history = base_dir + "testHistory.csv"
+train_history = base_dir + "trainHistory.csv"
 transactions = "../test_dir/split_out_transactions"
-# offers = "test_dir/offers.csv"
-# test_history = "../test_dir/testHistory.csv"
-# train_history = "../test_dir/trainHistory.csv"
-# transactions = "test_dir/transactions.csv"
-# features = "test_dir/features_dir"
-if __name__ == "__main__":
-	# fid = open(transactions)
-	# with open("test_dir/transactions.csv", "w") as test_transaction:
-	#     for i, line in enumerate(fid):
-	#         if i > 300000:
-	#             break;
-	#         test_transaction.write(line)
-	# fid.close()
-	# save old version:
-	timestamp = datetime.now().isoformat()
 
+if __name__ == "__main__":
+	# save old version:
+	t = datetime.now()
+	timestamp = "%d-%d-%d_%d-%d-%d" % (t.year, t.month, t.day, t.hour, t.minute, t.second)
 	print "begin extracting train file"
-	latest_feature = "../kaggle/train_features.txt"
-	old_feature = "../kaggle/train_features" + timestamp + ".txt"
+	latest_feature = base_dir + "train_features.txt"
+	old_feature = base_dir + "train_features" + timestamp + ".txt"
 	try:
 		os.rename(latest_feature, old_feature)
 	except Exception:
@@ -71,9 +69,16 @@ if __name__ == "__main__":
 
 	extractor_feature(train_history, offers, transactions, latest_feature)
 
+	save_obj(CustomerOfferFeature.__offer__, base_dir + "offer.map")
+	save_obj(CustomerOfferFeature.__category__, base_dir + "category.map")
+	save_obj(CustomerOfferFeature.__brand__, base_dir + "brand.map")
+	save_obj(CustomerOfferFeature.__company__, base_dir + "company.map")
+	save_obj(CustomerOfferFeature.__chain__, base_dir + "chain.map")
+	save_obj(CustomerOfferFeature.__dept__, base_dir + "dept.map")
+
 	print "begin extracting test file"
-	latest_feature = "../kaggle/test_features.txt"
-	old_feature = "../kaggle/test_features" + timestamp + ".txt"
+	latest_feature = base_dir + "test_features.txt"
+	old_feature = base_dir + "test_features" + timestamp + ".txt"
 	try:
 		os.rename(latest_feature, old_feature)
 	except Exception:

@@ -112,294 +112,142 @@ class OfferHistory(object):
 
 
 class CustomerOfferFeature(object):
-	"""docstring for Features"""
-
+	"""docstring for Features
+	提取新的特征，形式为：
+	category_id_amount: amount
+	category_id_dollar: dollar
+	category_id_time:   time
+	....
+	one_year_cost:  dollar
+	similar_customer_buy:  ratio
+	time类型的变量计算方法：按照时间权重计算freq之和
+	30天以内的权重0.5,30--60天的权重0.3,60--120天的权重0.2,120天之前的权重0.1
+	similar_customer_buy是根据以上特征归一化后算出来的topN用户里面，购买的比例
+	这里完全不用时间信息了
+	"""
+	__category__ = {"key_map":{}, "cnt":0}
+	__dept__ = {"key_map":{}, "cnt":0}
+	__company__ = {"key_map":{}, "cnt":0}
+	__brand__ = {"key_map":{}, "cnt":0}
+	__chain__ = {"key_map":{}, "cnt":0}
+	__offer__ = {"key_map":{}, "cnt":0}
 	def __init__(self, customer_file, offer_history, offer_info):
 		super(CustomerOfferFeature, self).__init__()
-		# history of bought the same brand, no matter what category:
-		self.bought_same_brand = [0 for i in range(4)]
-		self.bought_same_brand_dollar = [0.0 for i in range(4)]
-		self.bought_diff_brand = self.bought_same_brand
-		self.bought_same_company = [0 for i in range(4)]
-		self.bought_same_company_dollar = [0.0 for i in range(4)]
-		self.bought_diff_company = self.bought_same_company
-		self.bought_same_exactly = [0 for i in range(4)]
-		self.bought_same_exactly_dollar = [0.0 for i in range(4)]
-		self.same_exactly_amount_ratio = 0  # 购买了同brand，同company的产品总量和同category产品的比例
-		self.same_exactly_dollar_ratio = 0
-		self.brand_amount_ratio = 0  # 购买该品牌的总量，占同category产品的比例
-		self.brand_dollar_ratio = 0  # 购买该品牌的总价格，占同category产品的比例
-		self.company_amount_ratio = 0
-		self.company_dollar_ratio = 0
-		self.category_dollar_ratio = 0  # 全年购买商品中，该category的总花销比例
-		self.category_freq_ratio = 0  # 全年购买商品中，该category的购买次数比例
-		# 该offer的quantity和用户平时购买同brand的商品时的quantity是否match
-		self.offer_quantity_match = 0
-		self.offer_discount = 0  # 同units商品单价的比值，表示打折力度
-		self.the_company_dollar_ratio = 0
-		self.the_company_freq_ratio = 0
-		self.the_brand_dollar_ratio = 0
-		self.the_brand_freq_ratio = 0
-		# given the same brand as offered, is the company always preffered ?
-		self.brand_on_company_loyalty = 0
-		# given the same company as offered, is the brand always preffered ?
-		self.company_on_brand_loyalty = 0
-		self.company_cnt = 0
-		self.brand_cnt = 0
-		self.category_cnt = 0
-		self.dept_cnt = 0
-		self.one_year_shopping_cost = 0
-		self.everytime_shopping_cost = 0
-		# all above are numerate features:
-		self.feature_list = self.__dict__.keys()
 
-		self.most_category = ""
-		self.most_chain = ""
-		self.most_company = ""
-		self.most_brand = ""
-		self.most_dept = ""
+		self.brand_amount = {}
+		self.brand_dollar = {}
+		self.brand_time = {}
+		self.category_amount = {}
+		self.category_dollar = {}
+		self.category_time = {}
+		self.chain_time = {}
+		self.company_amount = {}
+		self.company_dollar = {}
+		self.company_time = {}
+		self.dept_amount = {}
+		self.dept_dollar = {}
+		self.dept_time = {}
+		self.dict_feature = set(self.__dict__.keys())
+		self.one_year_shopping_dollar = 0
+		self.one_year_shopping_time = 0
+		self.float_feature = set(self.__dict__.keys()) - \
+				(self.dict_feature.union(set(["dict_feature"])))
+
 		self.customer_info = CSV(customer_file)
 		self.offer_history = offer_history
 		self.offer_info = offer_info
+		# just update dict
+		self.getid(offer_info.offer_id, CustomerOfferFeature.__offer__)
+		self.getid(offer_info.brand, CustomerOfferFeature.__brand__)
+		self.getid(offer_info.company, CustomerOfferFeature.__company__)
+		self.getid(offer_info.category, CustomerOfferFeature.__category__)
 
 	def get(self):
-		# 中间变量
-		category_dollar_sum = 0
-		category_amount_sum = 0
-		same_exactly_amount_sum = 0
-		same_exactly_dollar_sum = 0
-		# 同category、同brand amount之和
-		same_brand_amount_sum = 0
-		same_brand_dollar_sum = 0
-		same_company_amount_sum = 0
-		same_company_dollar_sum = 0
-		total_shopping_dollar = 0
-		category_shopping_time = 0
-		total_shopping_time = 0
-		same_exactly_shopping_time = 0
-		same_exactly_quantity_sum = 0
-		# 所有category时，购买该brand的次数和花销
-		just_samebrand_shopping_time = 0
-		just_samebrand_dollar_sum = 0
-		just_samecompany_shopping_time = 0
-		just_samecompany_dollar_sum = 0
-		same_brand_company_shopping_time = 0
-		company_dict = {}
-		brand_dict = {}
-		dept_dict = {}
-		chain_dict = {}
-		category_dict = {}
-
-		offer_brand = self.offer_info.brand
-		offer_category = self.offer_info.category
-		offer_company = self.offer_info.company
-
 		for line in self.customer_info:
 			transactions_history = Transactions(line, self.offer_history.offerdate)
-			this_dept = transactions_history.dept
-			this_brand = transactions_history.brand
-			date_distance = transactions_history.date_distance
-			this_company = transactions_history.company
-			this_category = transactions_history.category
+			brand_id = self.getid(transactions_history.brand,
+			                 CustomerOfferFeature.__brand__)
+			company_id = self.getid(transactions_history.company,
+			                 CustomerOfferFeature.__company__)
+			category_id = self.getid(transactions_history.category,
+			                 CustomerOfferFeature.__category__)
+			dept_id = self.getid(transactions_history.dept,
+			                 CustomerOfferFeature.__dept__)
+			chain_id = self.getid(transactions_history.chain,
+			                 CustomerOfferFeature.__chain__)
+
 			dollar = transactions_history.purchase_dollar
 			amount = transactions_history.productsize * transactions_history.purchasequantity
-			total_shopping_time += 1
-			total_shopping_dollar += dollar
-			time_line = self.get_timeline(date_distance)
-			time_line_dollar = self.get_timeline(date_distance, dollar)
-			if this_brand == offer_brand:
-				just_samebrand_shopping_time += 1
-				just_samebrand_dollar_sum += transactions_history.purchase_dollar
-				self.bought_same_brand = \
-					self.merge_timeline(self.bought_same_brand, time_line)
-				self.bought_same_brand_dollar = \
-					self.merge_timeline(self.bought_same_brand_dollar, time_line_dollar)
-			else:
-				self.bought_diff_brand = \
-					self.merge_timeline(self.bought_diff_brand, time_line)
+			if dollar <= 0 or amount <= 0:
+				continue
 
-			if this_company == offer_company:
-				just_samecompany_shopping_time += 1
-				just_samecompany_dollar_sum += transactions_history.purchase_dollar
-				self.bought_same_company = \
-						self.merge_timeline(self.bought_same_company, time_line)
-				self.bought_same_company_dollar = \
-					self.merge_timeline(self.bought_same_company_dollar, time_line_dollar)
-			else:
-				self.bought_diff_company = \
-					self.merge_timeline(self.bought_diff_company, time_line)
+			date_distance = self.time_weight(transactions_history.date_distance)
+			input = (amount, dollar, date_distance)
+			self.set_value("brand", brand_id, input)
+			self.set_value("company", company_id, input)
+			self.set_value("category", category_id, input)
+			self.set_value("dept", dept_id, input)
 
-			if this_company == offer_company and this_brand == offer_brand:
-				same_brand_company_shopping_time += 1
+			self.chain_time.setdefault(chain_id, 0)
+			self.chain_time[chain_id] += 1
 
-			if not this_brand in brand_dict:
-				self.brand_cnt += 1
-				brand_dict[this_brand] = 0
-			if not this_company in company_dict:
-				self.company_cnt += 1
-				company_dict[this_company] = 0
-			if not this_category in category_dict:
-				self.category_cnt += 1
-				category_dict[this_category] = 0
-			if not this_dept in dept_dict:
-				self.dept_cnt += 1
-				dept_dict[this_dept] = 0
+			self.one_year_shopping_dollar += dollar
+			self.one_year_shopping_time += 1
 
-			brand_dict[this_brand] += 1
-			company_dict[this_company] += 1
-			category_dict[this_category] += 1
-			dept_dict[this_dept] += 1
-			chain_dict.setdefault(transactions_history.chain, 0)
-			chain_dict[transactions_history.chain] += 1
+	def set_value(self, name, id, input):
+		types = ["amount", "dollar", "time"]
+		for i, type in enumerate(types):
+			d = getattr(self, name + "_" + type)
+			d.setdefault(id, 0)
+			d[id] += input[i]
 
-			if this_category == offer_category:
-				if this_brand == offer_brand and this_company == offer_company:
-					# if transactions_history.purchasequantity > 0:
-					same_exactly_shopping_time += 1
-					same_exactly_amount_sum += amount
-					same_exactly_dollar_sum += dollar
-					same_exactly_quantity_sum += transactions_history.purchasequantity
-					self.bought_same_exactly = self.merge_timeline(\
-						self.bought_same_exactly, time_line)
-					self.bought_same_exactly_dollar = self.merge_timeline(\
-						self.bought_same_company_dollar, time_line_dollar)
+	def getid(self, k, _dict_):
+		d = _dict_["key_map"]
+		if not k in d:
+			d[k] = _dict_["cnt"]
+			_dict_["cnt"] += 1
+		return d[k]
 
-				if this_brand == offer_brand:
-					same_brand_amount_sum += amount
-					same_brand_dollar_sum += dollar
-
-				if this_company == offer_company:
-					same_company_amount_sum += amount
-					same_company_dollar_sum += dollar
-
-				category_dollar_sum += dollar
-				category_amount_sum += amount
-				category_shopping_time += 1
-
-		# norm time-line data
-		self.norm_vec("bought_same_exactly", same_exactly_shopping_time+0.0)
-		self.norm_vec("bought_same_exactly_dollar", same_exactly_dollar_sum)
-		self.norm_vec("bought_same_brand", just_samebrand_shopping_time+0.0)
-		self.norm_vec("bought_same_brand_dollar", just_samebrand_dollar_sum)
-		self.norm_vec("bought_same_company", just_samecompany_shopping_time+0.0)
-		self.norm_vec("bought_same_company_dollar", just_samecompany_dollar_sum)
-
-		self.norm_vec("bought_diff_brand", \
-		              total_shopping_time - just_samebrand_shopping_time + 0.0)
-		self.norm_vec("bought_diff_company", \
-		              total_shopping_time - just_samecompany_shopping_time+0.0)
-
-		self.one_year_shopping_cost = total_shopping_dollar
-		self.everytime_shopping_cost = total_shopping_dollar / total_shopping_time
-		# 购买了同brand，同company的产品总量和同category产品的比例
-		self.same_exactly_amount_ratio = self.limit_ratio(same_exactly_amount_sum, category_amount_sum)
-		self.same_exactly_dollar_ratio = self.limit_ratio(same_exactly_dollar_sum, category_dollar_sum)
-		# 购买该品牌的总量，占同category产品的比例
-		self.brand_amount_ratio = self.limit_ratio(same_brand_amount_sum, category_amount_sum)
-		# 购买该品牌的总价格，占同category产品的比例
-		self.brand_dollar_ratio = self.limit_ratio(same_brand_dollar_sum, category_dollar_sum)
-		self.company_amount_ratio = self.limit_ratio(same_company_amount_sum, category_amount_sum)
-		self.company_dollar_ratio = self.limit_ratio(same_company_dollar_sum, category_dollar_sum)
-		# 全年购买商品中，该category的总花销比例		
-		self.category_dollar_ratio = self.limit_ratio(category_dollar_sum, total_shopping_dollar)
-		# 全年购买商品中，该category的购买次数比例
-		self.category_freq_ratio = self.limit_ratio(category_shopping_time, total_shopping_time)
-		self.the_company_dollar_ratio = self.limit_ratio(just_samecompany_dollar_sum, \
-                                                 total_shopping_dollar)
-		self.the_company_freq_ratio = self.limit_ratio(just_samecompany_shopping_time, \
-		                                               total_shopping_time)
-		self.the_brand_dollar_ratio = self.limit_ratio(just_samebrand_dollar_sum, \
-		                                               total_shopping_dollar)
-		self.the_brand_freq_ratio = self.limit_ratio(just_samebrand_shopping_time, \
-		                                             total_shopping_time)
-		self.brand_on_company_loyalty = self.limit_ratio(same_brand_company_shopping_time, \
-		                                                 just_samebrand_shopping_time)
-		self.company_on_brand_loyalty = self.limit_ratio(same_brand_company_shopping_time, \
-		                                                 just_samecompany_shopping_time)
-
-		self.most_category = self.most_in_dict(category_dict)
-		self.most_chain = self.most_in_dict(chain_dict)
-		self.most_company = self.most_in_dict(company_dict)
-		self.most_brand = self.most_in_dict(brand_dict)
-		self.most_dept = self.most_in_dict(dept_dict)
-
-		# 该offer的quantity和用户平时购买同brand的商品时的quantity是否match
-		if same_exactly_shopping_time == 0:
-			self.offer_quantity_match = 0
-			self.offer_discount = 1
-		else:
-			if same_exactly_shopping_time == 0 or self.offer_info.quantity == 0:
-				self.offer_quantity_match = 0
-			else:
-				self.offer_quantity_match = float(same_exactly_quantity_sum) / \
-				                            same_exactly_shopping_time / \
-			                                self.offer_info.quantity
-			if same_exactly_quantity_sum == 0 or self.offer_info.quantity == 0:
-				self.offer_discount = 1
-			else:
-				unit_price_before = float(same_exactly_dollar_sum) / same_exactly_quantity_sum
-				offer_price = float(self.offer_info.offervalue) / self.offer_info.quantity
-				# 同units商品单价的比值，表示打折力度
-				self.offer_discount = self.limit_ratio(offer_price, unit_price_before)
-	def merge_timeline(self, a, b):
-		return [i+j for i,j in zip(a,b)]
-
-	def limit_ratio(self, a, b):
-		if a == 0:
-			return 0
-		elif b == 0:
-			return 1
-		else:
-			return float(a) / b
-
-	def get_timeline(self, date_distance, value=1):
-		ret = [0, 0, 0, 0]
+	def time_weight(self, date_distance):
 		if date_distance < 30:
-			ret[0] = value
+			return 0.5
 		elif date_distance < 60:
-			ret[1] = value
+			return 0.3
 		elif date_distance < 120:
-			ret[2] = value
+			return 0.2
 		else:
-			ret[3] = value
-		return ret
-	def most_in_dict(self, one_dict):
-		maxv = 0
-		ret = None
-		for k, v in one_dict.items():
-			if maxv < v:
-				maxv = v
-				ret = k
-		return ret
-	def norm_vec(self, name, N):
-		if N == 0:
-			return
-		v = getattr(self, name)
-		norm_v = [i/N for i in v]
-		setattr(self, name, norm_v)
+			return 0.1
 
 	def __str__(self):
 		out = StringIO.StringIO()
-		repeater = self.offer_history.repeater
+		repeater = self.offer_history.repeattrips
 		out.write("%d '%s" % (repeater, self.offer_history.customer_id))
-		time_line_feature = filter(lambda f: f.startswith("bought_"), dir(self))
-		other_feature = set(self.feature_list) - set(time_line_feature)
-		for f in time_line_feature:
-			time_line_list = getattr(self, f)
-			for i, x in enumerate(time_line_list):
-				out.write(" %s%d:%f" % (f, i, x))
-		for f in other_feature:
-			out.write(" %s:%f" % (f, getattr(self, f)))
+		feature_list = list(self.dict_feature)
+		feature_list.sort()
+		for fname in feature_list:
+			feature = getattr(self, fname)
+			# namespace:
+			out.write(" |%s" % fname)
+			for k, v in feature.items():
+				out.write(" %d:%f" % (k, v))
+		out.write(" | ")
+		for fname in self.float_feature:
+			feature = getattr(self, fname)
+			out.write(" %s:%f" % (fname, feature))
 		# nominal features:
-		out.write(" offer_%s" % self.offer_info.offer_id)
-		out.write(" category_%s" % self.offer_info.category)
-		out.write(" brand_%s" % self.offer_info.brand)
-		out.write(" company_%s" % self.offer_info.company)
-		out.write(" most_brand_%s" % self.most_brand)
-		out.write(" most_category_%s" % self.most_category)
-		out.write(" most_chain_%s" % self.most_chain)
-		out.write(" most_company_%s" % self.most_company)
-		out.write(" most_dept_%s" % self.most_dept)
+		offer_id = self.getid(self.offer_info.offer_id,
+		                      CustomerOfferFeature.__offer__)
+		brand_id = self.getid(self.offer_info.brand,
+		                 CustomerOfferFeature.__brand__)
+		company_id = self.getid(self.offer_info.company,
+		                 CustomerOfferFeature.__company__)
+		category_id = self.getid(self.offer_info.category,
+		                 CustomerOfferFeature.__category__)
+
+		out.write(" offer_%d" % offer_id)
+		out.write(" category_%s" % category_id)
+		out.write(" brand_%s" % brand_id)
+		out.write(" company_%s" % company_id)
 		out.seek(0)
 		str_self = out.next()
 		out.close()
